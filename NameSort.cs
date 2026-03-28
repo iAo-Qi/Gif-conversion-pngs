@@ -1,0 +1,230 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace Tr
+{
+    public struct ImageName
+    {
+        public string name;
+        public string oldname;
+        public Image image;
+    };
+    public static class ImageNameSort
+    {
+        const char A = 'A';
+        public const string Folder_SpriteSheet = "SpriteSheetImages";
+        public const string Folder_NoBlackImages = "NoBlackImages";
+        public const string Folder_OrdinaryImages = "OrdinaryImages";
+        public const string Folder_ImagesData = "ImagesData";
+        public static string SetName(string name, int index)
+        {
+            int i = 0;
+            int id = index;
+            string r = "";
+            while (id != 0)
+            {
+                id /= 26;
+                i++;
+            }
+            i--;
+            for (id = 0; id < i; id++)
+            {
+                r += "Z";
+            }
+            r += (char)(A + (index % 26));//A~Z
+
+            return r + "_" + name;
+        }
+        public static long SumASCII(string str)
+        {
+            long Length = 0;
+            foreach (var item in str)
+            {
+                if ((int)item >= 48 && (int)item <= 57 || (int)item >= 65 && (int)item <= 90 || (int)item >= 97 && (int)item <= 122)
+                    Length += (long)((int)item);
+            }
+            return Length;
+        }
+        public static string StrArrayToString(in string[] array)
+        {
+            string str = null;
+            foreach (var item in array)
+            {
+                str += item;
+            }
+            return str;
+        }
+
+        public static string RemoveClutter(string str)
+        {
+            char[] sp = { ' ', '_', '+', '-', '/', '(', ')', '（', '）', '.', '。' };
+            string[] strs = str.Split(sp, StringSplitOptions.RemoveEmptyEntries);
+            return StrArrayToString(in strs);
+        }
+
+        //如果出现了 名称不统一会报错↓ 修不好 不修了
+        public static long? StrToint(string str)
+        {
+            string rc = RemoveClutter(str);
+            string tmp = null;
+            List<char> tmp1 = rc.Where((c) => char.IsDigit(c)).ToList();
+
+            //合并字符
+            foreach (var item in tmp1)
+            {
+                tmp += item;
+            }
+
+            string ret = null;
+            int first = 0;
+            //如果没有数字的话 就返回null
+            if ( string.IsNullOrEmpty( tmp))
+            {
+                return null;
+            }
+            for (var i = 0; i < tmp.Length; i++)
+            {
+                //零开头的报错 2023年7月4日19:23:26
+                if (first == 0 && Int32.Parse(tmp[i].ToString()) != 0)
+                {
+                    //第一个不为0的;
+                    ret += tmp[i];
+                    ++first;
+
+                }
+                else if (first == 1)
+                {
+                    ret += tmp[i];
+                }
+                else if (tmp.Length == 1)
+                {
+                    ret += tmp[i];
+                }
+            }
+            return long.Parse(ret);
+        }
+        public static long? StrTointNEW(string str) 
+        {
+            string rc = RemoveClutter(str);
+
+            try
+            {
+                return long.Parse(rc);
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
+        }
+        public static List<ImageName> IntSort(List<ImageName> names)
+        {
+            
+            List<ImageName> str = new List<ImageName>();
+            List<ImageName> num = new List<ImageName>();
+
+            //分离出纯字符串和纯数字的
+            foreach (var item in names) 
+            {
+                if (StrTointNEW(item.name) == null) 
+                {
+                    str.Add(item);
+                }
+                else 
+                {
+                    num.Add(item);
+                }
+            }
+            List<ImageName> ret = num.Select(x=>x).ToList();
+
+            for (int i = 0; i < num.Count; i++)
+            {
+                for (int j = i + 1; j < num.Count; j++)
+                {
+                    // int > int
+                    var a = StrTointNEW(ret[i].name);
+
+                    var b = StrTointNEW(ret[j].name);
+                    // i     J
+                    if (a > b)
+                    {
+                        ImageName tmp = ret[i];
+                        ret[i] = ret[j];
+                        ret[j] = tmp;
+                    }
+                }
+            }
+            if (str.Count !=0)
+            {
+               List<ImageName> s= StrSort(str);
+               return ret.Concat(s).ToList();
+            }
+
+  
+            return ret;
+        }
+        public static List<ImageName> SortBIgForward(List<ImageName> imageNames)
+        {
+            List<ImageName> imageName = imageNames;
+            for (int i = 0; i < imageNames.Count; i++)
+            {
+                for (int j = i + 1; j < imageName.Count; j++)
+                    if (SumASCII(imageName[i].name) < SumASCII(imageName[j].name))
+                    {
+                        ImageName tmp = imageName[j];
+                        imageName[j] = imageName[i];
+                        imageName[i] = tmp;
+                    }
+            }
+            return imageNames;
+        }
+        public static List<ImageName> StrSort(List<ImageName> names)
+        {
+
+            string[] str = new string[names.Count];
+
+            List<ImageName> ret = new List<ImageName>(names.Count);
+
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                foreach (var item in names)
+                {
+                    if (item.name == str[i])
+                    {
+                        ret.Add(item);
+                        break;
+                    }
+                }
+            }
+  
+
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                str[i] = names[i].name;
+            }
+            Array.Sort(str);
+
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                foreach (var item in names)
+                {
+                    if (item.name == str[i])
+                    {
+                        ret.Add(item);
+                        break;
+                    }
+                }
+            }
+
+            return ret;
+        }
+
+
+    }
+}
